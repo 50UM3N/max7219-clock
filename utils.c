@@ -1,5 +1,10 @@
 #include "font.h"
 
+#define MEDIUM_AM 0
+#define MEDIUM_PM 1
+#define POS_ROW 0
+#define POS_COL 1
+
 int get_length(int num) {
   int length = 0;
   while (num != 0) {
