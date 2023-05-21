@@ -225,9 +225,9 @@ const Display = ({ ip }: { ip: string }) => {
                             <Chip size="md" value="4">
                                 Animation
                             </Chip>
-                            <Chip size="md" value="5">
+                            {/* <Chip size="md" value="5">
                                 Loop
-                            </Chip>
+                            </Chip> */}
                         </Group>
                     </Chip.Group>
                 </Paper>
@@ -235,7 +235,7 @@ const Display = ({ ip }: { ip: string }) => {
                     <Title order={4}>Display Settings</Title>
                     <Divider my="xs" />
                     <Stack spacing="md" mt="md">
-                        <Group position="apart">
+                        {/* <Group position="apart">
                             <Text>9.45 AM</Text>
                             <Button variant="outline">Change Time</Button>
                         </Group>
@@ -244,7 +244,7 @@ const Display = ({ ip }: { ip: string }) => {
                             <Button variant="outline" onClick={() => ws?.send(MessageType.SET_TEXT + " hello world")}>
                                 Change Date
                             </Button>
-                        </Group>
+                        </Group> */}
                         <Group position="apart">
                             <Text>Use 24-hour format</Text>
                             <Switch

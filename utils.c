@@ -229,7 +229,20 @@ int **generate_humidity(float humidity) {
   return matrix;
 }
 
-int **generate_time(int hour, int minutes, int second, int medium) {
+int **generate_time(int hour, int minutes, int second, int use_24_hour_format) {
+  int meridiem = -1;
+  if (use_24_hour_format == 0) {
+    if (hour >= 12) {
+      meridiem = MEDIUM_PM;
+      if (hour > 12)
+        hour -= 12;
+
+    } else {
+      meridiem = MEDIUM_AM;
+      if (hour == 0)
+        hour = 12;
+    }
+  }
   // Allocate memory for the matrix
   int **matrix = (int **)malloc(8 * sizeof(int *));
   for (int i = 0; i < 8; i++) {
@@ -269,7 +282,7 @@ int **generate_time(int hour, int minutes, int second, int medium) {
     }
   }
   int start_position[2] = { 0, 18 };
-  if (medium > 0)
+  if (use_24_hour_format == 0)
     start_position[1] = 14;
   // hour first digit
   for (int i = start_position[POS_ROW]; i < number_font_1_size[POS_ROW]; i++) {
@@ -336,27 +349,29 @@ int **generate_time(int hour, int minutes, int second, int medium) {
   }
   start_position[1] += number_font_1_size[POS_COL] + 2;
   start_position[0] = 2;
-  if (medium = MEDIUM_AM) {
-    for (int i = start_position[POS_ROW]; i < start_position[POS_ROW] + alphabets_size[POS_ROW]; i++) {
-      for (int j = start_position[POS_COL], k = 0; j < start_position[POS_COL] + alphabets_size[POS_COL]; j++, k++) {
-        matrix[i][j] = alphabets[0][i - start_position[POS_ROW]][k];
+
+  if (use_24_hour_format == 0) {
+    if (meridiem == MEDIUM_AM) {
+      for (int i = start_position[POS_ROW]; i < start_position[POS_ROW] + alphabets_size[POS_ROW]; i++) {
+        for (int j = start_position[POS_COL], k = 0; j < start_position[POS_COL] + alphabets_size[POS_COL]; j++, k++) {
+          matrix[i][j] = alphabets[0][i - start_position[POS_ROW]][k];
+        }
+      }
+    } else if (meridiem == MEDIUM_PM) {
+      for (int i = start_position[POS_ROW]; i < start_position[POS_ROW] + alphabets_size[POS_ROW]; i++) {
+        for (int j = start_position[POS_COL], k = 0; j < start_position[POS_COL] + alphabets_size[POS_COL]; j++, k++) {
+          matrix[i][j] = alphabets[15][i - start_position[POS_ROW]][k];
+        }
       }
     }
-  } else if (medium = MEDIUM_PM) {
-    for (int i = start_position[POS_ROW]; i < start_position[POS_ROW] + alphabets_size[POS_ROW]; i++) {
-      for (int j = start_position[POS_COL], k = 0; j < start_position[POS_COL] + alphabets_size[POS_COL]; j++, k++) {
-        matrix[i][j] = alphabets[15][i - start_position[POS_ROW]][k];
-      }
-    }
-  }
-  start_position[1] += alphabets_size[POS_COL] + 1;
-  if (medium > 0) {
+    start_position[1] += alphabets_size[POS_COL] + 1;
     for (int i = start_position[POS_ROW]; i < start_position[POS_ROW] + alphabets_size[POS_ROW]; i++) {
       for (int j = start_position[POS_COL], k = 0; j < start_position[POS_COL] + alphabets_size[POS_COL]; j++, k++) {
         matrix[i][j] = alphabets[12][i - start_position[POS_ROW]][k];
       }
     }
   }
+
 
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {

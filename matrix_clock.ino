@@ -9,6 +9,7 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Arduino_JSON.h>
+#include "LittleFS.h"
 #include "utils.c"
 
 // ----------------- Hardware devices config -----------------
@@ -53,7 +54,7 @@ LedControl lc = LedControl(DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
 char message[SCROLLING_TEXT_SIZE];
 int display_mode = DISPLAY_TIME;                                 // as default display time
-char scrolling_message[SCROLLING_TEXT_SIZE] = "Scrolling text";  // the scrolling message
+char scrolling_message[SCROLLING_TEXT_SIZE] = "Hello World";      // the scrolling message
 int scrolling_speed = SCROLLING_SPEED;
 int use_24_hour_format = 0;
 int message_hold_time = HOLD_TIME;
@@ -93,7 +94,7 @@ void setup() {
 #endif
 
   // ---------------- Iint Serial Monitor -------------------
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(3000);  // wait for console opening
   // --------------------------------------------------------
 
@@ -102,6 +103,15 @@ void setup() {
   display.setIntensity(0);
   display.displayClear();
   // -------------------------------------------------
+
+  //-------------------Init LittleFS------------------------
+
+  if (!LittleFS.begin()) {
+    Serial.println("An error has occurred while mounting LittleFS");
+  }
+  else{
+   Serial.println("LittleFS mounted successfully");
+  }
 
   // ------------------Init Wifi ---------------------------
   WiFi.begin(wifi_ssid, wifi_password);
@@ -150,9 +160,10 @@ void setup() {
   // ---------------- Init WS and Server -------------------
   ws.onEvent(onEvent);
   server.addHandler(&ws);
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-  //   request->send_P(200, "text/html", index_html, processor);
-  // });
+   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+     request->send(LittleFS, "/index.html", "text/html");
+   });
+   server.serveStatic("/", LittleFS, "/");
   server.begin();
   // --------------------------------------------------------
   _time = millis();
@@ -160,23 +171,9 @@ void setup() {
 
 void loop() {
   DateTime now = rtc.now();
-  int meridiem = -1;
-  int hour = now.hour();
   switch (display_mode) {
     case DISPLAY_TIME:
-      if (use_24_hour_format != 1) {
-        if (hour >= 12) {
-          meridiem = MEDIUM_PM;
-          if (hour > 12)
-            hour -= 12;
-
-        } else {
-          meridiem = MEDIUM_AM;
-          if (hour == 0)
-            hour = 12;
-        }
-      }
-      print_matrix(generate_time(hour, now.minute(), now.second(), meridiem));
+      print_matrix(generate_time(now.hour(), now.minute(), now.second(), use_24_hour_format));
       break;
     case DISPLAY_DATE:
       print_matrix(generate_date(now.dayOfTheWeek(), now.day(), now.month(), now.year()));
@@ -193,7 +190,7 @@ void loop() {
       }
       break;
     case DISPLAY_LOOP:
-      print_matrix(generate_time(now.hour(), now.minute(), now.second(), meridiem));
+      print_matrix(generate_time(now.hour(), now.minute(), now.second(), use_24_hour_format));
       break;
   }
 }
