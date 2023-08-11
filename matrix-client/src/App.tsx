@@ -1,11 +1,9 @@
-import { ActionIcon, Button, Center, Chip, Container, Divider, Group, Header, Input, Loader, NumberInput, NumberInputHandlers, Paper, Stack, Switch, Text, Textarea, Title, rem, useMantineColorScheme, useMantineTheme } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { IconMoonStars, IconPlugConnectedX, IconSun, IconWifi } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { IconPlugConnectedX } from "@tabler/icons-react";
+import { useEffect, useState } from "preact/hooks";
 
 enum MessageType {
     MODE = "0",
-    SET_TIME = "1",
+    SET_DATE_TIME = "1",
     SET_DATE = "2",
     SET_DATE_FORMAT = "3",
     SET_ANIMATION_SPEED = "4",
@@ -14,8 +12,6 @@ enum MessageType {
 }
 
 function App() {
-    const { colorScheme, toggleColorScheme } = useMantineColorScheme();
-    const theme = useMantineTheme();
     const [ip, setIp] = useState(window.location.host);
     const [ipInput, setIpInput] = useState("");
     const [ipError, setIpError] = useState<null | string>(null);
@@ -39,73 +35,55 @@ function App() {
 
     return (
         <>
-            <Header height={56} mb="md" style={{ display: "flex", alignItems: "center" }}>
-                <Container w="100%" size="xs">
-                    <Group position="apart">
-                        <Title order={4}>Matrix Display</Title>
-                        <Group>
-                            <Group position="center">
-                                <Switch
-                                    checked={colorScheme === "dark"}
-                                    onChange={() => toggleColorScheme()}
-                                    size="lg"
-                                    onLabel={<IconSun color={theme.white} size="1.25rem" stroke={1.5} />}
-                                    offLabel={<IconMoonStars color={theme.colors.gray[6]} size="1.25rem" stroke={1.5} />}
-                                />
-                            </Group>
-                            {openApp && (
-                                <ActionIcon
-                                    color="teal"
-                                    radius="xl"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setOpenApp(false);
-                                    }}
-                                >
-                                    <IconPlugConnectedX size="1.125rem" />
-                                </ActionIcon>
-                            )}
-                        </Group>
-                    </Group>
-                </Container>
-            </Header>
+            <header className="container max-w-lg p-3 flex justify-between border-b border-mine-shaft-700 mb-4">
+                <div className="px-3 py-1 rounded-lg bg-mine-shaft-100 text-mine-shaft-700 dark:text-mine-shaft-200 dark:bg-mine-shaft-600">Matrix Clock</div>
+                {openApp && (
+                    <button
+                        onClick={() => {
+                            setOpenApp(false);
+                        }}
+                        className="p-[6px] bg-mine-shaft-800 rounded-lg active:bg-mine-shaft-700 text-white"
+                    >
+                        <IconPlugConnectedX size="1.125rem" />
+                    </button>
+                )}
+            </header>
+
             {!openApp ? (
-                <Container size="xs">
-                    <Paper radius="md" withBorder p="md" pt="sm">
-                        <Title order={3}>Welcome in Matrix Clock</Title>
-                        <Divider my="xs" />
-                        <Text mb="xs">Connect with</Text>
-                        <Stack spacing="xs">
-                            <Input
-                                size="md"
-                                icon={<IconWifi />}
-                                placeholder="eg. 192.168.0.102"
-                                title="IP Address"
+                <div className="container max-w-lg px-3">
+                    <div className="rounded-xl border border-mine-shaft-600 p-4 bg-mine-shaft-800">
+                        <h2 className="text-white text-xl mb-1">Welcome in Matrix Clock</h2>
+
+                        <p className="text-mine-shaft-400 mb-3">Connect with</p>
+                        <div className="flex flex-col gap-3">
+                            <input
+                                type="text"
                                 value={ipInput}
                                 onChange={(e) => {
                                     checkIpAddress(e.currentTarget.value);
                                     setIpInput(e.currentTarget.value);
                                 }}
-                                error={ipError}
+                                placeholder="eg. 192.168.0.102"
+                                className={`active:outline-none px-3 py-2 rounded-lg focus:outline-none border-2 border-m-green-500 focus:border-m-green-400 text-white bg-transparent ${ipError ? "border-red-500" : ""}`}
                             />
-                            <Group spacing="xs" grow>
-                                <Button size="md" onClick={handleConnectToIp}>
-                                    Connect to Ip
-                                </Button>
-                                <Button
-                                    size="md"
-                                    variant="outline"
+
+                            <div className="flex gap-3">
+                                <button className="py-2 flex-1 px-3 bg-m-green-600 active:bg-m-green-500 rounded-lg border-2 border-m-green-600 active:border-m-green-500 text-white" onClick={handleConnectToIp}>
+                                    Connect To Ip
+                                </button>
+                                <button
+                                    className="py-2 px-3 border-2 flex-1 border-m-green-600 active:border-m-green-500 rounded-lg text-white"
                                     onClick={() => {
                                         setIpInput("");
                                         setOpenApp(true);
                                     }}
                                 >
                                     Connect Default Ip
-                                </Button>
-                            </Group>
-                        </Stack>
-                    </Paper>
-                </Container>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             ) : (
                 <Display ip={ip} />
             )}
@@ -123,7 +101,7 @@ const Display = ({ ip }: { ip: string }) => {
     const [messageHoldTime, setMessageHoldTime] = useState(6000);
     const [scrollingMessage, setScrollingMessage] = useState("");
     const [scrollMessageError, setScrollMessageError] = useState<null | string>(null);
-
+    const [date, setDate] = useState("");
     const handleScrollingMessageUpdate = () => {
         if (!checkScrollMessage(scrollingMessage)) return;
         ws?.send(MessageType.SET_TEXT + " " + scrollingMessage);
@@ -190,73 +168,90 @@ const Display = ({ ip }: { ip: string }) => {
 
     if (!wsState.connected)
         return (
-            <Center my="xl">
-                <Loader />
-            </Center>
+            <div className="flex justify-center items-center">
+                <p className="text-white">Loading..</p>
+            </div>
         );
-
+    const labels = [
+        { value: "0", label: "Time" },
+        { value: "1", label: "Date" },
+        { value: "2", label: "Temperature" },
+        { value: "3", label: "Humidity" },
+        { value: "4", label: "Animation" },
+        { value: "5", label: "Loop" },
+    ];
     return (
-        <Container size="xs">
-            <Stack spacing="">
-                <Paper radius="md" withBorder p="md" pt="sm">
-                    <Title order={4}>Change Display Mode</Title>
-                    <Divider my="xs" />
-                    <Chip.Group
-                        multiple={false}
-                        value={String(displayMode)}
-                        onChange={(value) => {
-                            ws?.send(MessageType.MODE + " " + value);
-                            setDisplayMode(value);
-                        }}
-                    >
-                        <Group position="center" spacing="xs">
-                            <Chip size="md" value="0">
-                                Time
-                            </Chip>
-                            <Chip size="md" value="1">
-                                Date
-                            </Chip>
-                            <Chip size="md" value="2">
-                                Temperature
-                            </Chip>
-                            <Chip size="md" value="3">
-                                Humidity
-                            </Chip>
-                            <Chip size="md" value="4">
-                                Animation
-                            </Chip>
-                            {/* <Chip size="md" value="5">
-                                Loop
-                            </Chip> */}
-                        </Group>
-                    </Chip.Group>
-                </Paper>
-                <Paper radius="md" withBorder p="md" pt="sm">
-                    <Title order={4}>Display Settings</Title>
-                    <Divider my="xs" />
-                    <Stack spacing="md" mt="md">
-                        {/* <Group position="apart">
-                            <Text>9.45 AM</Text>
-                            <Button variant="outline">Change Time</Button>
-                        </Group>
-                        <Group position="apart">
-                            <Text>April 11, 2023</Text>
-                            <Button variant="outline" onClick={() => ws?.send(MessageType.SET_TEXT + " hello world")}>
+        <div className="container max-w-lg px-3">
+            <div className="flex flex-col gap-3">
+                <div className="rounded-xl border border-mine-shaft-600 p-4 bg-mine-shaft-800">
+                    <h2 className="text-white text-xl mb-3">Change Display Mode</h2>
+
+                    <div className="flex flex-wrap gap-x-3 gap-y-0">
+                        {labels.map((label) => (
+                            <div className="flex items-center mb-4 cursor-pointer" key={label.value}>
+                                <input
+                                    id={`id-${label.value}`}
+                                    type="radio"
+                                    value={label.value}
+                                    checked={label.value === displayMode}
+                                    onChange={(e) => {
+                                        ws?.send(MessageType.MODE + " " + e.currentTarget.value);
+                                        setDisplayMode(e.currentTarget.value);
+                                    }}
+                                    name="default-radio"
+                                    className="w-4 h-4 bg-m-green-700 border-m-green-600 accent-m-green-600"
+                                />
+                                <label htmlFor={`id-${label.value}`} className="select-none pl-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                    {label.label}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="rounded-xl border border-mine-shaft-600 p-4 bg-mine-shaft-800">
+                    <h2 className="text-white text-xl mb-3">Display Settings</h2>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                            <input
+                                type="datetime-local"
+                                value={date}
+                                onChange={(a) => {
+                                    console.log(a.currentTarget.value);
+                                    if (!a.currentTarget.value) return;
+                                    setDate(a.currentTarget.value);
+                                }}
+                                placeholder="Pick date and time"
+                                className={`text-xs active:outline-none px-3 py-2 max-w-xs rounded-lg focus:outline-none border-2 border-m-green-500 focus:border-m-green-400 text-white bg-transparent`}
+                            />
+                            <button
+                                className="py-2 px-3 border-2 border-m-green-600 active:border-m-green-500 rounded-lg text-white"
+                                onClick={() => {
+                                    const d = new Date(date);
+                                    const year = d.getFullYear();
+                                    const month = d.getMonth();
+                                    +1;
+                                    const day = d.getDate();
+                                    const hour = d.getHours();
+                                    const minutes = d.getMinutes();
+                                    ws?.send(MessageType.SET_DATE_TIME + ` ${year},${month},${day},${hour},${minutes},${0}`);
+                                }}
+                            >
                                 Change Date
-                            </Button>
-                        </Group> */}
-                        <Group position="apart">
-                            <Text>Use 24-hour format</Text>
-                            <Switch
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <label>Use 24-hour format</label>
+                            <input
+                                className="w-5 h-5  accent-m-green-600"
+                                type="checkbox"
                                 checked={use24HourFormat ? true : false}
                                 onChange={(e) => {
                                     ws?.send(MessageType.SET_DATE_FORMAT + " " + (e.currentTarget.checked ? "1" : "0"));
                                     setUse24HourFormat(e.currentTarget.checked ? 1 : 0);
                                 }}
                             />
-                        </Group>
-                        <Divider />
-                        <Group position="apart">
+                        </div>
+                        {/* <Group position="apart">
                             <Text>Animation speed</Text>
                             <CustomNumberInput
                                 max={100}
@@ -284,7 +279,6 @@ const Display = ({ ip }: { ip: string }) => {
                                 }}
                             />
                         </Group>
-                        <Divider />
                         <Textarea
                             placeholder="Your message"
                             label="Your message"
@@ -300,51 +294,54 @@ const Display = ({ ip }: { ip: string }) => {
                             <Button variant="outline" onClick={handleScrollingMessageUpdate}>
                                 Update
                             </Button>
-                        </Group>
-                    </Stack>
-                </Paper>
-            </Stack>
-        </Container>
+                        </Group> */}
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 };
 
-const CustomNumberInput: React.FC<{ max?: number; min?: number; step?: number; value?: number; onValueChange?: (value: any) => void; time?: number }> = ({ max = 10, min = 0, step = 2, onValueChange, time = 350, value }) => {
-    const [_value, setValue] = useState<number>(value || min);
-    const handlers = useRef<NumberInputHandlers>();
+// const CustomNumberInput: React.FC<{ max?: number; min?: number; step?: number; value?: number; onValueChange?: (value: any) => void; time?: number }> = ({ max = 10, min = 0, step = 2, onValueChange, time = 350, value }) => {
+//     const [_value, setValue] = useState<number>(value || min);
+//     const handlers = useRef<NumberInputHandlers>();
 
-    useEffect(() => {
-        setValue(value || min);
-    }, [value]);
+//     useEffect(() => {
+//         setValue(value || min);
+//     }, [value]);
 
-    return (
-        <Group spacing={5}>
-            <ActionIcon size={36} variant="default" onClick={() => handlers?.current?.decrement()}>
-                –
-            </ActionIcon>
+//     return (
+//         <Group spacing={5}>
+//             <ActionIcon size={36} variant="default" onClick={() => handlers?.current?.decrement()}>
+//                 –
+//             </ActionIcon>
 
-            <NumberInput
-                readOnly
-                hideControls
-                onChange={(val) => {
-                    setValue(val as number);
-                    onValueChange && onValueChange(val);
-                }}
-                handlersRef={handlers}
-                value={_value}
-                max={max}
-                min={min}
-                step={step}
-                styles={{
-                    input: {
-                        width: rem(64),
-                        textAlign: "center",
-                    },
-                }}
-            />
+//             <input
+//                                 type="number"
 
-            <ActionIcon size={36} variant="default" onClick={() => handlers?.current?.increment()}>
-                +
-            </ActionIcon>
-        </Group>
-    );
-};
+//                                 placeholder="Pick date and time"
+//                                 className={`text-xs active:outline-none px-3 py-2 max-w-xs rounded-lg focus:outline-none border-2 border-m-green-500 focus:border-m-green-400 text-white bg-transparent`}
+//                 readOnly
+//                 onChange={(val) => {
+//                     setValue(val as number);
+//                     onValueChange && onValueChange(val);
+//                 }}
+//                 handlersRef={handlers}
+//                 value={_value}
+//                 max={max}
+//                 min={min}
+//                 step={step}
+//                 styles={{
+//                     input: {
+//                         width: rem(64),
+//                         textAlign: "center",
+//                     },
+//                 }}
+//             />
+
+//             <ActionIcon size={36} variant="default" onClick={() => handlers?.current?.increment()}>
+//                 +
+//             </ActionIcon>
+//         </Group>
+//     );
+// };

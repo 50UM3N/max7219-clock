@@ -31,7 +31,7 @@ LedControl lc = LedControl(DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
 // ----------------- Opcode config ----------------------
 #define MODE 0
-#define SET_TIME 1
+#define SET_DATE_TIME 1
 #define SET_DATE 2
 #define SET_DATE_FORMAT 3
 #define SET_ANIMATION_SPEED 4
@@ -53,8 +53,8 @@ LedControl lc = LedControl(DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 #define HOLD_TIME 5000
 
 char message[SCROLLING_TEXT_SIZE];
-int display_mode = DISPLAY_TIME;                                 // as default display time
-char scrolling_message[SCROLLING_TEXT_SIZE] = "Hello World";      // the scrolling message
+int display_mode = DISPLAY_TIME;                              // as default display time
+char scrolling_message[SCROLLING_TEXT_SIZE] = "Hello World";  // the scrolling message
 int scrolling_speed = SCROLLING_SPEED;
 int use_24_hour_format = 0;
 int message_hold_time = HOLD_TIME;
@@ -104,31 +104,6 @@ void setup() {
   display.displayClear();
   // -------------------------------------------------
 
-  //-------------------Init LittleFS------------------------
-
-  if (!LittleFS.begin()) {
-    Serial.println("An error has occurred while mounting LittleFS");
-  }
-  else{
-   Serial.println("LittleFS mounted successfully");
-  }
-
-  // ------------------Init Wifi ---------------------------
-  WiFi.begin(wifi_ssid, wifi_password);
-  while (WiFi.status() != WL_CONNECTED) {
-    print_matrix(generate_text(1, 24, "WiFi."));
-    delay(300);
-    print_matrix(generate_text(1, 24, "WiFi.."));
-    delay(300);
-    print_matrix(generate_text(1, 24, "WiFi..."));
-    delay(300);
-  }
-  String Ip = WiFi.localIP().toString();
-  print_matrix(generate_text(1, ((64 - ((Ip.length() - 2) * 4)) / 2), Ip.c_str()));
-  delay(10000);
-  Serial.println(Ip);
-  display.displayClear();
-  // ------------------------------------------------------
 
   // ---------------- Iint RTC -------------------
   if (!rtc.begin()) {
@@ -145,6 +120,30 @@ void setup() {
   }
   // --------------------------------------------------------
 
+  //-------------------Init LittleFS------------------------
+
+  if (!LittleFS.begin()) {
+    Serial.println("An error has occurred while mounting LittleFS");
+  } else {
+    Serial.println("LittleFS mounted successfully");
+  }
+
+  // ------------------Init Wifi ---------------------------
+  WiFi.begin(wifi_ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    print_matrix(generate_text(1, 24, "WiFi."));
+    delay(300);
+    print_matrix(generate_text(1, 24, "WiFi.."));
+    delay(300);
+    print_matrix(generate_text(1, 24, "WiFi..."));
+    delay(300);
+  }
+  String Ip = WiFi.localIP().toString();
+  print_matrix(generate_text(1, ((64 - ((Ip.length() - 2) * 4)) / 2), Ip.c_str()));
+  delay(2000);
+  Serial.println(Ip);
+  display.displayClear();
+  // ------------------------------------------------------
 
   // ---------------- Iint DHT -------------------
   dht.begin();
@@ -160,16 +159,17 @@ void setup() {
   // ---------------- Init WS and Server -------------------
   ws.onEvent(onEvent);
   server.addHandler(&ws);
-   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-     request->send(LittleFS, "/index.html", "text/html");
-   });
-   server.serveStatic("/", LittleFS, "/");
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/index.html", "text/html");
+  });
+  server.serveStatic("/", LittleFS, "/");
   server.begin();
   // --------------------------------------------------------
   _time = millis();
 }
 
 void loop() {
+
   DateTime now = rtc.now();
   switch (display_mode) {
     case DISPLAY_TIME:
@@ -192,6 +192,11 @@ void loop() {
     case DISPLAY_LOOP:
       print_matrix(generate_time(now.hour(), now.minute(), now.second(), use_24_hour_format));
       break;
+  }
+  if (Serial.available() > 0) {
+    int incomingByte = Serial.read();
+    Serial.print("I received: ");
+    Serial.println(incomingByte);
   }
 }
 
@@ -264,6 +269,12 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     String second_field = message.substring(2, len);
     int opcode = first_field.toInt();
     int number;
+
+    int year, month, day, hour, minute, second;
+
+    int commaPos[5];  // To store the positions of commas
+    int commaCount = 0;
+
     switch (opcode) {
       case MODE:
         Serial.println("Setting up display mode");
@@ -271,10 +282,22 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
         display_mode = number;
         changed = true;
         break;
-      case SET_TIME:
-        Serial.println("Setting up Time");
+      case SET_DATE_TIME:
+        Serial.println("Setting up Date Time");
         Serial.println(second_field);
-        // set the time and set it
+        for (int i = 0; i < second_field.length(); i++) {
+          if (second_field.charAt(i) == ',') {
+            commaPos[commaCount] = i;
+            commaCount++;
+          }
+        }
+        year = second_field.substring(0, commaPos[0]).toInt();
+        month = second_field.substring(commaPos[0] + 1, commaPos[1]).toInt();
+        day = second_field.substring(commaPos[1] + 1, commaPos[2]).toInt();
+        hour = second_field.substring(commaPos[2] + 1, commaPos[3]).toInt();
+        minute = second_field.substring(commaPos[3] + 1, commaPos[4]).toInt();
+        second = second_field.substring(commaPos[4] + 1).toInt();
+        rtc.adjust(DateTime(year, month, day, hour, minute, second));
         break;
       case SET_DATE:
         Serial.println("Setting up Date");
